@@ -241,3 +241,169 @@ fprintf('  %s_Cube_Fraction_Map.png\n', sampleName);
 fprintf('  %s_Cube_Grains_Only.png\n', sampleName);
 fprintf('  %s_Cube_Grains_with_Boundaries.png\n', sampleName);
 fprintf('  %s_Statistics_Table.png\n', sampleName);
+
+
+%%
+
+%% Pixel deviation from pure Cube (0..1)
+% 0  -> exact cube
+% 1  -> >= tol_angle away from cube (clipped)
+
+ebsd_al = ebsd('Aluminium');
+if isempty(ebsd_al)
+    warning('No Aluminium pixels found. Skipping cube deviation map.');
+else
+    % Ideal Cube for fcc Al: {001}<100>
+    cs = ebsd_al.CS;
+    ori_cube = orientation.byMiller([0 0 1],[1 0 0], cs);
+
+    % Misorientation angle (degrees) of each pixel to Cube
+    ang_deg = angle(ebsd_al.orientations, ori_cube) / degree;
+
+    % Normalize to 0..1 with clipping at tol_angle
+    tol_deg = tol_angle / degree;
+    dev_al  = min(ang_deg, tol_deg) / tol_deg;   % 0..1
+
+    % Plot: Cube deviation map (0..1)
+    fig_dev = figure('Position',[120,120,900,700]);
+    plot(ebsd_al, dev_al);
+    axis equal tight off
+
+    % Custom red→white colormap
+    ncol = 256;
+    cmap = [linspace(1,1,ncol)', linspace(0,1,ncol)', linspace(0,1,ncol)']; % [R G B]
+    % This goes from red [1 0 0] at 0 to white [1 1 1] at 1
+    colormap(cmap);
+
+    caxis([0 1]);
+    cb = colorbar;
+    cb.Label.String = 'Cube deviation (0 = red, 1 = white)';
+    cb.Label.FontWeight = 'bold';
+
+
+    % Optional: faint background for non-Al pixels (light gray)
+    hold on
+    nonAl = ebsd(~ismember(ebsd.mineral, {'Aluminium'}));
+    if ~isempty(nonAl)
+        plot(nonAl, 'FaceColor', [0.92 0.92 0.92], 'EdgeColor', 'none');
+    end
+    hold off
+
+    % Remove MTEX auto scale bar without Unicode matching
+    try
+        % Newer MTEX tags colorbars; if not, this just does nothing
+        delete(findall(gca,'Tag','mtexColorbar'));
+    catch
+    end
+
+    print(fig_dev, fullfile(pwd, [sampleName, '_CubeDeviation_Map.png']), '-dpng','-r300');
+end
+
+%% Pixel deviation from pure Cube (0..1)
+% 0  -> exact cube (red)
+% 1  -> >= tol_angle away from cube (blue)
+
+ebsd_al = ebsd('Aluminium');
+if isempty(ebsd_al)
+    warning('No Aluminium pixels found. Skipping cube deviation map.');
+else
+    % Ideal Cube for fcc Al: {001}<100>
+    cs = ebsd_al.CS;
+    ori_cube = orientation.byMiller([0 0 1],[1 0 0], cs);
+
+    % Misorientation angle (degrees) of each pixel to Cube
+    ang_deg = angle(ebsd_al.orientations, ori_cube) / degree;
+
+    % Normalize to 0..1 with clipping at tol_angle
+    tol_angle = 0.5
+    tol_deg = tol_angle / degree;
+    dev_al  = min(ang_deg, tol_deg) / tol_deg;   % 0..1
+
+    % Plot: Cube deviation map (0..1)
+    fig_dev = figure('Position',[120,120,900,700]);
+    plot(ebsd_al, dev_al);
+    axis equal tight off
+
+    % Custom red→blue colormap
+    ncol = 256;
+    cmap = [linspace(1,0,ncol)', ... % R: 1 → 0
+            zeros(ncol,1), ...       % G: 0 → 0
+            linspace(0,1,ncol)'];    % B: 0 → 1
+    colormap(cmap);
+
+    caxis([0 1]);
+    cb = colorbar;
+    cb.Label.String = 'Cube deviation (0 = red, 1 = blue)';
+    cb.Label.FontWeight = 'bold';
+
+    % Optional: faint background for non-Al pixels (light gray)
+    hold on
+    nonAl = ebsd(~ismember(ebsd.mineral, {'Aluminium'}));
+    if ~isempty(nonAl)
+        plot(nonAl, 'FaceColor', [0.92 0.92 0.92], 'EdgeColor', 'none');
+    end
+    hold off
+
+    % Remove MTEX auto scale bar if present
+    try
+        delete(findall(gca,'Tag','mtexColorbar'));
+    catch
+    end
+
+    % Save PNG
+    print(fig_dev, fullfile(pwd, [sampleName, '_CubeDeviation_Map_bluered.png']), '-dpng','-r300');
+end
+
+
+
+%% Pixel-wise deviation from pure Cube (0..1)
+% Compare tolerance = 10° vs 25°
+
+ebsd_al = ebsd('Aluminium');
+if isempty(ebsd_al)
+    warning('No Aluminium pixels found. Skipping cube deviation map.');
+else
+    % Ideal Cube for fcc Al: {001}<100>
+    cs = ebsd_al.CS;
+    ori_cube = orientation.byMiller([0 0 1],[1 0 0], cs);
+
+    % Misorientation angle (degrees) of each pixel to Cube
+    ang_deg = angle(ebsd_al.orientations, ori_cube) / degree;
+
+    % Loop over two tolerance values
+    for tol_deg = [40, 50]
+
+        % Normalise to 0..1 with clipping at current tolerance
+        dev_al = min(ang_deg, tol_deg) / tol_deg;
+
+        % Plot: Cube deviation map (0..1)
+        fig_dev = figure('Position',[120,120,900,700]);
+        plot(ebsd_al, dev_al);
+        axis equal tight off
+
+        % Custom red→blue colormap
+        ncol = 256;
+        cmap = [linspace(1,0,ncol)', ... % R: 1 → 0
+                zeros(ncol,1), ...       % G: 0 → 0
+                linspace(0,1,ncol)'];    % B: 0 → 1
+        colormap(cmap);
+
+        caxis([0 1]);
+        cb = colorbar;
+        cb.Label.String = sprintf('Cube deviation (0 = red, 1 = blue), tol = %d°', tol_deg);
+        cb.Label.FontWeight = 'bold';
+
+        % Optional: faint background for non-Al pixels (light gray)
+        hold on
+        nonAl = ebsd(~ismember(ebsd.mineral, {'Aluminium'}));
+        if ~isempty(nonAl)
+            plot(nonAl, 'FaceColor', [0.92 0.92 0.92], 'EdgeColor', 'none');
+        end
+        hold off
+
+        % Save PNG with tolerance in filename
+        print(fig_dev, fullfile(pwd, ...
+            sprintf('%s_CubeDeviation_%ddeg.png', sampleName, tol_deg)), ...
+            '-dpng','-r300');
+    end
+end
